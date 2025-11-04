@@ -2,6 +2,7 @@ import customtkinter as ctk
 from ui.pages.key_page import KeysPage
 from ui.pages.encrypt_page import EncryptPage
 from ui.pages.sign_page import SignPage
+from ui.styles import HEADING_FONT, BUTTON_FONT, button_kwargs
 import os
 
 # Apariencia
@@ -22,16 +23,11 @@ class App(ctk.CTk):
         self.sidebar = ctk.CTkFrame(self, width=240, fg_color=SIDEBAR_BG, corner_radius=0)
         self.sidebar.pack(side="left", fill="y")
 
-        self.logo = ctk.CTkLabel(self.sidebar, text="🔐 CryptoDesk", font=("Segoe UI", 18, "bold"))
+        self.logo = ctk.CTkLabel(self.sidebar, text="🔐 CryptoDesk", font=HEADING_FONT)
         self.logo.pack(pady=(30, 20))
 
-        btn_style = {
-            "fg_color": ACCENT,
-            "hover_color": "#17a28f",
-            "height": 44,
-            "corner_radius": 12,
-            "font": ("Segoe UI", 13, "bold")
-        }
+        # estilo consistente para botones (con borde)
+        btn_style = button_kwargs(ACCENT)
 
         self.btn_keys = ctk.CTkButton(self.sidebar, text="🔑 Generar Claves", command=self.show_keys, **btn_style)
         self.btn_keys.pack(fill="x", padx=20, pady=(8, 6))
