@@ -22,15 +22,27 @@ def load_private_key_from_file(path: str):
         return load_pem_private_key(f.read(), password=None)
 
 def hybrid_encrypt_file(pubkey_path: str, infile_path: str) -> str:
-    # load public key
-    pub = load_public_key_from_file(pubkey_path)
-    # generate AES key
-    aes_key = AESGCM.generate_key(bit_length=256)
-    aesgcm = AESGCM(aes_key)
-    nonce = os.urandom(12)
-    with open(infile_path, 'rb') as f:
-        plaintext = f.read()
-    ciphertext = aesgcm.encrypt(nonce, plaintext, None)
+    try:
+        # load public key
+        if not os.path.exists(pubkey_path):
+            raise ValueError("No se encontró la clave pública. Genera o selecciona una clave primero.")
+        pub = load_public_key_from_file(pubkey_path)
+        
+        # check input file
+        if not os.path.exists(infile_path):
+            raise ValueError("No se encontró el archivo a cifrar.")
+            
+        # generate AES key
+        aes_key = AESGCM.generate_key(bit_length=256)
+        aesgcm = AESGCM(aes_key)
+        nonce = os.urandom(12)
+        with open(infile_path, 'rb') as f:
+            plaintext = f.read()
+        ciphertext = aesgcm.encrypt(nonce, plaintext, None)
+    except (ValueError, OSError) as e:
+        raise ValueError(f"Error al cifrar el archivo: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Error inesperado al cifrar: {str(e)}")
     # encrypt AES key with RSA-OAEP
     enc_key = pub.encrypt(
         aes_key,
@@ -47,16 +59,26 @@ def hybrid_encrypt_file(pubkey_path: str, infile_path: str) -> str:
     return out_path
 
 def hybrid_decrypt_file(privkey_path: str, enc_path: str) -> str:
-    priv = load_private_key_from_file(privkey_path)
-    with open(enc_path, 'rb') as f:
-        header = f.read(len(HEADER))
-        if header != HEADER:
-            raise ValueError("File format not recognized or header missing.")
-        klen_bytes = f.read(4)
-        klen = struct.unpack(">I", klen_bytes)[0]
-        enc_key = f.read(klen)
-        nonce = f.read(12)
-        ciphertext = f.read()
+    try:
+        if not os.path.exists(privkey_path):
+            raise ValueError("No se encontró la clave privada. Selecciona una clave primero.")
+        if not os.path.exists(enc_path):
+            raise ValueError("No se encontró el archivo cifrado.")
+            
+        priv = load_private_key_from_file(privkey_path)
+        with open(enc_path, 'rb') as f:
+            header = f.read(len(HEADER))
+            if header != HEADER:
+                raise ValueError("El archivo no parece estar cifrado (formato no reconocido).")
+            klen_bytes = f.read(4)
+            klen = struct.unpack(">I", klen_bytes)[0]
+            enc_key = f.read(klen)
+            nonce = f.read(12)
+            ciphertext = f.read()
+    except (ValueError, OSError) as e:
+        raise ValueError(f"Error al descifrar el archivo: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Error inesperado al descifrar: {str(e)}")
     # decrypt AES key
     aes_key = priv.decrypt(
         enc_key,
